@@ -1,0 +1,22 @@
+{
+  "name": "ai-grocery-agent-backend",
+  "version": "1.0.0",
+  "description": "AI Smart Grocery Agent — Backend API",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0",
+    "razorpay": "^2.9.6",
+    "uuid": "^11.1.0"
+  }
+}
