@@ -55,6 +55,7 @@ app.use('/api/v1/auth', authRouter); // backward compatibility
 app.use('/api/profile', profileRouter);
 app.use('/api/addresses', addressesRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/v1/ai', aiRouter); // backward compatibility
 
 // ─── Core E-Commerce API Routes ───────────────────────────────────────────────
 app.use('/api/v1/parse-list', parseListRouter);

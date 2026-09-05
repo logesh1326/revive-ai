@@ -131,6 +131,12 @@ export default function ScanGroceryList() {
 
       setTimeout(() => {
         setIsProcessing(false);
+        try {
+          sessionStorage.setItem('revive_last_scan', JSON.stringify(response));
+          if (selectedImage) sessionStorage.setItem('revive_last_scan_img', selectedImage);
+        } catch (e) {
+          // ignore quota error
+        }
         navigate('/smart-cart-review', {
           state: {
             scanResult: response,

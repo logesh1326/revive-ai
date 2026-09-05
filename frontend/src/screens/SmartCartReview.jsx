@@ -18,8 +18,15 @@ export default function SmartCartReview() {
   const { addToCart } = useCart();
   const { user } = useAuth();
 
-  const scanResult = location.state?.scanResult;
-  const imagePreview = location.state?.imagePreview;
+  const scanResult = location.state?.scanResult || (() => {
+    try {
+      const saved = sessionStorage.getItem('revive_last_scan');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  })();
+  const imagePreview = location.state?.imagePreview || sessionStorage.getItem('revive_last_scan_img') || null;
 
   const [matches, setMatches] = useState(() => scanResult?.matches || []);
   const [selectedIndices, setSelectedIndices] = useState(() => {

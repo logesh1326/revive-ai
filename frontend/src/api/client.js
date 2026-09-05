@@ -5,7 +5,7 @@ async function request(path, options = {}) {
   // Determine if path belongs to engine v1 or main API
   const url = path.startsWith('/v1') 
     ? `${API_ROOT}${path}` 
-    : (path.startsWith('/auth') || path.startsWith('/profile') || path.startsWith('/addresses') 
+    : (path.startsWith('/auth') || path.startsWith('/profile') || path.startsWith('/addresses') || path.startsWith('/ai')
         ? `${API_ROOT}${path}` 
         : `${ENGINE_BASE}${path}`);
 
