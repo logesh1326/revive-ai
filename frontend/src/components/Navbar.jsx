@@ -66,13 +66,13 @@ export default function Navbar() {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            {/* Menu Scanner Quick Pill */}
+            {/* Scan Grocery List Quick Pill */}
             <Link
-              to="/menu-scanner"
-              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-bold text-xs hover:bg-purple-100 transition-all shadow-2xs"
+              to="/scan-grocery-list"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-bold text-xs hover:bg-purple-100 transition-all shadow-2xs"
             >
-              <ChefHat className="w-3.5 h-3.5 text-purple-600" />
-              <span>Menu & Recipe Scan</span>
+              <Camera className="w-3.5 h-3.5 text-purple-600" />
+              <span>📝 Scan List</span>
             </Link>
 
             {/* AI Assistant Quick Pill */}

@@ -9,7 +9,7 @@ export default function BottomNav() {
 
   const navItems = [
     { to: '/home', icon: Home, label: 'Home' },
-    { to: '/menu-scanner', icon: ChefHat, label: 'Menu Scan' },
+    { to: '/scan-grocery-list', icon: ChefHat, label: 'Scan List' },
     { to: '/ai-assistant', icon: Sparkles, label: 'ReviveAI', highlight: true },
     { to: '/search', icon: Search, label: 'Search' },
     { to: '/cart', icon: ShoppingBag, label: 'Cart', badge: totalCount },
