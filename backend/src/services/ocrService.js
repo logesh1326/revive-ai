@@ -23,39 +23,58 @@ export async function extractText(imageData, mimeType = 'image/jpeg') {
       const genAI = new GoogleGenerativeAI(geminiApiKey.trim());
       const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-      // Convert Buffer to base64 if needed
+      // Convert Buffer, URL, or Data URI to base64
       let base64Data = '';
+      let resolvedMime = mimeType || 'image/jpeg';
+
       if (Buffer.isBuffer(imageData)) {
         base64Data = imageData.toString('base64');
       } else if (typeof imageData === 'string') {
-        base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+        if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
+          try {
+            const resp = await fetch(imageData);
+            const arrayBuffer = await resp.arrayBuffer();
+            base64Data = Buffer.from(arrayBuffer).toString('base64');
+            const ct = resp.headers.get('content-type');
+            if (ct) resolvedMime = ct;
+          } catch (e) {
+            console.warn(`[OCR Warning] Could not fetch remote image URL: ${e.message}`);
+          }
+        } else {
+          // Data URL
+          const mimeMatch = imageData.match(/^data:([^;]+);base64,/);
+          if (mimeMatch) resolvedMime = mimeMatch[1];
+          base64Data = imageData.replace(/^data:image\/\w+;base64,/, '').replace(/^data:[^;]+;base64,/, '');
+        }
       }
 
-      const prompt = `You are a high-accuracy handwriting OCR engine for a grocery application.
+      if (base64Data && base64Data.length > 50) {
+        const prompt = `You are a high-accuracy handwriting OCR engine for a grocery application.
 Examine this grocery list image carefully. It may contain messy handwriting, shorthand abbreviations, quantities, crossed out items, or question marks.
 Extract every grocery item line by line exactly as written on the list.
 Preserve quantities (e.g. "eggs (2)", "potatoes 1kg", "milk 2 packets"), abbreviations, and question marks (e.g. "paper towels ?").
 Return ONLY the transcribed list of items, one item per line, with no extra conversational text or formatting.`;
 
-      const result = await model.generateContent([
-        prompt,
-        {
-          inlineData: {
-            data: base64Data,
-            mimeType: mimeType || 'image/jpeg',
+        const result = await model.generateContent([
+          prompt,
+          {
+            inlineData: {
+              data: base64Data,
+              mimeType: resolvedMime,
+            },
           },
-        },
-      ]);
+        ]);
 
-      const response = await result.response;
-      const text = response.text().trim();
+        const response = await result.response;
+        const text = response.text().trim();
 
-      if (text) {
-        return {
-          raw_text: text,
-          confidence: 0.96,
-          mode: 'live_gemini_vision',
-        };
+        if (text) {
+          return {
+            raw_text: text,
+            confidence: 0.96,
+            mode: 'live_gemini_vision',
+          };
+        }
       }
     } catch (err) {
       console.warn(`[OCR Warning] Gemini Vision error: ${err.message}. Using dynamic OCR fallback.`);

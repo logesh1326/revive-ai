@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Plus, Minus, Trash2, ShoppingBag, Sparkles, 
-  ShieldCheck, ArrowRight, Tag, Zap, AlertCircle
+  ShieldCheck, ArrowRight, Tag, Zap, AlertCircle, CheckCircle2,
+  Gift, X
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import BottomNav from '../components/BottomNav';
@@ -17,12 +18,33 @@ export default function Cart() {
   const { 
     items, updateQuantity, removeFromCart, clearCart, 
     subtotal, deliveryFee, platformFee, grandTotal, totalSavings, totalCount,
-    addToCart
+    addToCart, addBatchToCart, coupon, couponDiscount, applyCoupon, removeCoupon
   } = useCart();
+
+  const [couponInput, setCouponInput] = useState('');
+  const [couponMessage, setCouponMessage] = useState(null);
 
   const freeDeliveryThreshold = 199;
   const amountNeededForFreeDelivery = Math.max(0, freeDeliveryThreshold - subtotal);
   const freeDeliveryPercent = Math.min(100, (subtotal / freeDeliveryThreshold) * 100);
+
+  const handleApplyCoupon = (codeToApply) => {
+    const code = codeToApply || couponInput;
+    if (!code || !code.trim()) return;
+    const res = applyCoupon(code);
+    setCouponMessage(res);
+    if (res.success) {
+      setCouponInput('');
+    }
+  };
+
+  const handleAddStarterEssentials = () => {
+    addBatchToCart([
+      { product: PRODUCTS[0], qty: 2 }, // Amul Milk
+      { product: PRODUCTS[5], qty: 1 }, // Bread
+      { product: PRODUCTS[3], qty: 1 }  // Tomatoes
+    ]);
+  };
 
   if (items.length === 0) {
     return (
@@ -32,26 +54,33 @@ export default function Cart() {
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-24 h-24 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-4 text-purple-600"
+            className="w-24 h-24 rounded-full bg-purple-50 flex items-center justify-center mx-auto mb-4 text-purple-600 shadow-sm"
           >
             <ShoppingBag className="w-12 h-12" />
           </motion.div>
           <h2 className="text-xl font-black text-slate-900">Your Cart is Empty</h2>
           <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-            Looks like you haven't added fresh essentials yet. Discover smart AI deals today!
+            Looks like you haven't added fresh essentials yet. Discover smart AI deals or load starter groceries!
           </p>
-          <div className="mt-6 flex flex-col gap-3">
+          <div className="mt-6 flex flex-col gap-2.5">
             <button
-              onClick={() => navigate('/home')}
-              className="py-3 px-6 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-md shadow-purple-600/20"
+              onClick={handleAddStarterEssentials}
+              className="py-3.5 px-6 bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-xs sm:text-sm rounded-2xl shadow-md shadow-purple-600/25 flex items-center justify-center gap-2 cursor-pointer transition-all"
             >
-              Start Shopping
+              <Sparkles className="w-4 h-4 text-yellow-300" />
+              <span>Add Starter Essentials (Milk, Bread, Tomatoes)</span>
             </button>
             <button
-              onClick={() => navigate('/ai-assistant')}
-              className="py-3 px-6 bg-purple-50 hover:bg-purple-100 text-purple-700 font-extrabold text-xs sm:text-sm rounded-2xl border border-purple-200"
+              onClick={() => navigate('/scan-grocery-list')}
+              className="py-3 px-6 bg-purple-50 hover:bg-purple-100 text-purple-700 font-extrabold text-xs sm:text-sm rounded-2xl border border-purple-200 cursor-pointer transition-all"
             >
-              ✨ Ask ReviveAI to Build Basket
+              📝 Scan Handwritten Grocery List
+            </button>
+            <button
+              onClick={() => navigate('/home')}
+              className="py-3 px-6 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs sm:text-sm rounded-2xl border border-slate-200 cursor-pointer transition-all"
+            >
+              Browse Grocery Catalog
             </button>
           </div>
         </main>
@@ -71,21 +100,24 @@ export default function Cart() {
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+              className="p-2 rounded-2xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">
-              My Cart ({totalCount} {totalCount === 1 ? 'item' : 'items'})
-            </h1>
+            <div>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight">
+                My Cart ({totalCount} {totalCount === 1 ? 'item' : 'items'})
+              </h1>
+              <p className="text-xs text-purple-700 font-bold">Express 15–20 Min Delivery</p>
+            </div>
           </div>
 
           <button
             onClick={clearCart}
-            className="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1"
+            className="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors flex items-center gap-1 cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Clear</span>
+            <span>Clear Cart</span>
           </button>
         </div>
 
@@ -145,7 +177,7 @@ export default function Cart() {
                         {item.name}
                       </h4>
                       <span className="text-[11px] text-slate-400 font-semibold block">
-                        {item.quantity_unit || item.quantity || '1 pack'}
+                        {item.unit || item.quantity_unit || '1 pack'}
                       </span>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="text-xs font-black text-slate-900">
@@ -157,29 +189,118 @@ export default function Cart() {
                       </div>
                     </div>
 
-                    {/* Quantity Controls */}
-                    <div className="flex items-center bg-purple-50 text-purple-700 border border-purple-200 rounded-xl overflow-hidden p-0.5">
-                      <motion.button
-                        whileTap={{ scale: 0.8 }}
-                        onClick={() => updateQuantity(item.id, -1)}
-                        className="w-7 h-7 flex items-center justify-center hover:bg-purple-200/60 rounded-lg transition-colors font-bold text-sm"
+                    {/* Quantity Controls & Delete */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center bg-purple-50 text-purple-700 border border-purple-200 rounded-xl overflow-hidden p-0.5">
+                        <motion.button
+                          whileTap={{ scale: 0.8 }}
+                          onClick={() => updateQuantity(item.id, -1)}
+                          className="w-7 h-7 flex items-center justify-center hover:bg-purple-200/60 rounded-lg transition-colors font-bold text-sm cursor-pointer"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </motion.button>
+                        <span className="w-7 text-center text-xs font-black text-slate-900">
+                          {item.quantity}
+                        </span>
+                        <motion.button
+                          whileTap={{ scale: 0.8 }}
+                          onClick={() => updateQuantity(item.id, 1)}
+                          className="w-7 h-7 flex items-center justify-center hover:bg-purple-200/60 rounded-lg transition-colors font-bold text-sm cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </motion.button>
+                      </div>
+
+                      <button
+                        onClick={() => removeFromCart(item.id)}
+                        className="p-1.5 text-slate-300 hover:text-red-500 rounded-lg transition-colors cursor-pointer"
+                        title="Remove item"
                       >
-                        <Minus className="w-3.5 h-3.5" />
-                      </motion.button>
-                      <span className="w-7 text-center text-xs font-black text-slate-900">
-                        {item.quantity}
-                      </span>
-                      <motion.button
-                        whileTap={{ scale: 0.8 }}
-                        onClick={() => updateQuantity(item.id, 1)}
-                        className="w-7 h-7 flex items-center justify-center hover:bg-purple-200/60 rounded-lg transition-colors font-bold text-sm"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                      </motion.button>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
+            </div>
+
+            {/* Promo / Coupon Box */}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-purple-50 card-shadow space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Coupons & Offers</span>
+                </span>
+                {coupon && (
+                  <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    Active: {coupon.code}
+                  </span>
+                )}
+              </div>
+
+              {!coupon ? (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Enter promo code (e.g. REVIVE50)"
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 uppercase focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <button
+                      onClick={() => handleApplyCoupon()}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                    >
+                      Apply
+                    </button>
+                  </div>
+
+                  {couponMessage && (
+                    <p className={`text-[11px] font-bold ${couponMessage.success ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {couponMessage.message}
+                    </p>
+                  )}
+
+                  {/* 1-Click Available Coupons */}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      onClick={() => handleApplyCoupon('REVIVE50')}
+                      className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 cursor-pointer flex items-center gap-1"
+                    >
+                      <span>REVIVE50</span>
+                      <span className="text-slate-400">• Flat ₹50 OFF</span>
+                    </button>
+                    <button
+                      onClick={() => handleApplyCoupon('SUPER10')}
+                      className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-pointer flex items-center gap-1"
+                    >
+                      <span>SUPER10</span>
+                      <span className="text-slate-400">• 10% Smart Savings</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <div>
+                      <span className="text-xs font-black text-emerald-950 block">
+                        {coupon.label}
+                      </span>
+                      <span className="text-[10px] text-emerald-700 font-semibold">
+                        Code "{coupon.code}" applied
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={removeCoupon}
+                    className="p-1 rounded-lg hover:bg-emerald-100 text-emerald-800 transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* AI Smart Savings Suggestion */}
@@ -210,6 +331,13 @@ export default function Cart() {
                   <span>Item Subtotal</span>
                   <span className="text-slate-900 font-extrabold">₹{subtotal}</span>
                 </div>
+
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-600 font-extrabold bg-emerald-50/80 p-2 rounded-xl border border-emerald-200/60">
+                    <span>Coupon Discount ({coupon?.code})</span>
+                    <span>- ₹{couponDiscount}</span>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-center">
                   <span>Delivery Fee</span>
@@ -251,7 +379,7 @@ export default function Cart() {
               {/* Proceed to Checkout */}
               <button
                 onClick={() => navigate('/checkout')}
-                className="w-full py-3.5 px-4 bg-purple-600 hover:bg-purple-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center gap-2 mt-2"
+                className="w-full py-3.5 px-4 bg-purple-600 hover:bg-purple-700 active:scale-[0.99] text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
               >
                 <span>Proceed to Checkout</span>
                 <ArrowRight className="w-4 h-4" />
@@ -276,7 +404,7 @@ export default function Cart() {
           </div>
           <button
             onClick={() => navigate('/checkout')}
-            className="flex-1 py-3 px-4 bg-purple-600 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-md shadow-purple-600/30 flex items-center justify-center gap-2"
+            className="flex-1 py-3 px-4 bg-purple-600 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-md shadow-purple-600/30 flex items-center justify-center gap-2 cursor-pointer"
           >
             <span>Proceed to Checkout</span>
             <ArrowRight className="w-4 h-4" />

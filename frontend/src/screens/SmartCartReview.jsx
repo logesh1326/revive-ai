@@ -15,7 +15,7 @@ import { api } from '../api/client';
 export default function SmartCartReview() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, addBatchToCart } = useCart();
   const { user } = useAuth();
 
   const scanResult = location.state?.scanResult || (() => {
@@ -142,26 +142,30 @@ export default function SmartCartReview() {
     setExpandedAlternatives((prev) => ({ ...prev, [itemIndex]: false }));
   };
 
-  // Add All / Selected to Cart
+  // Add All / Selected to Cart atomically
   const handleAddToCart = () => {
     setIsAdding(true);
     setAddedAnimation(true);
 
+    const batch = [];
     matches.forEach((item, idx) => {
       if (selectedIndices.has(idx) && item.recommended_product) {
         const prod = item.recommended_product;
-        // Map catalog product to Cart format
-        addToCart({
-          id: prod.sku,
-          name: prod.name,
-          category: prod.category || item.category,
-          brand: prod.brand,
-          price: prod.price,
-          originalPrice: prod.original_price || prod.price + 15,
-          unit: `${prod.pack_size || item.quantity} ${prod.unit || ''}`.trim(),
-          image: prod.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80',
-          inStock: true,
-        }, item.quantity || 1);
+        batch.push({
+          product: {
+            id: prod.sku,
+            sku: prod.sku,
+            name: prod.name,
+            category: prod.category || item.category,
+            brand: prod.brand,
+            price: Number(prod.price) || 0,
+            originalPrice: Number(prod.original_price || prod.price + 15),
+            unit: `${prod.pack_size || item.quantity || 1} ${prod.unit || ''}`.trim(),
+            image: prod.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80',
+            inStock: true,
+          },
+          qty: item.quantity || 1,
+        });
 
         // Record positive reward for Contextual Bandit
         api.sendAiFeedback({
@@ -174,10 +178,14 @@ export default function SmartCartReview() {
       }
     });
 
+    if (batch.length > 0) {
+      addBatchToCart(batch);
+    }
+
     setTimeout(() => {
       setIsAdding(false);
       navigate('/cart');
-    }, 800);
+    }, 600);
   };
 
   if (!matches || matches.length === 0) {

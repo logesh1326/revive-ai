@@ -88,6 +88,76 @@ export const CartProvider = ({ children }) => {
     });
   };
 
+  const [coupon, setCoupon] = useState(() => {
+    try {
+      const savedCoupon = localStorage.getItem('revive_coupon');
+      return savedCoupon ? JSON.parse(savedCoupon) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    if (coupon) {
+      localStorage.setItem('revive_coupon', JSON.stringify(coupon));
+    } else {
+      localStorage.removeItem('revive_coupon');
+    }
+  }, [coupon]);
+
+  const addBatchToCart = (batchItems) => {
+    setItems((prev) => {
+      const copy = [...prev];
+      batchItems.forEach(({ product, qty = 1 }) => {
+        if (!product) return;
+        const prodId = product.id || product.sku;
+        const existingIdx = copy.findIndex(
+          (item) => item.id === prodId || (item.sku && item.sku === prodId) || item.name.toLowerCase() === product.name.toLowerCase()
+        );
+        if (existingIdx > -1) {
+          copy[existingIdx] = {
+            ...copy[existingIdx],
+            quantity: (Number(copy[existingIdx].quantity) || 0) + (Number(qty) || 1),
+          };
+        } else {
+          copy.push({
+            id: prodId || `prod_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            sku: product.sku || prodId,
+            name: product.name,
+            brand: product.brand,
+            category: product.category,
+            price: Number(product.price) || 0,
+            originalPrice: Number(product.originalPrice || product.original_price || product.price),
+            unit: product.unit || product.pack_size || '1 pack',
+            image: product.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=300&q=80',
+            quantity: Number(qty) || 1,
+          });
+        }
+      });
+      return copy;
+    });
+  };
+
+  const applyCoupon = (code) => {
+    const clean = (code || '').trim().toUpperCase();
+    if (clean === 'REVIVE50' || clean === 'FIRST50') {
+      const c = { code: clean, discount: 50, label: '₹50 Flat Discount' };
+      setCoupon(c);
+      return { success: true, message: '🎉 ₹50 discount applied successfully!' };
+    }
+    if (clean === 'SUPER10') {
+      const disc = Math.max(10, Math.round(subtotal * 0.1));
+      const c = { code: clean, discount: disc, label: '10% Smart Savings' };
+      setCoupon(c);
+      return { success: true, message: '🎉 10% discount applied successfully!' };
+    }
+    return { success: false, message: 'Invalid promo code. Try REVIVE50 or SUPER10.' };
+  };
+
+  const removeCoupon = () => {
+    setCoupon(null);
+  };
+
   const switchAndSave = (oldItemName, betterDealProduct) => {
     setItems((prev) => {
       const filtered = prev.filter(
@@ -99,34 +169,37 @@ export const CartProvider = ({ children }) => {
 
   const clearCart = () => {
     setItems([]);
+    setCoupon(null);
   };
 
   const getItemQuantity = (productId) => {
-    const item = items.find((i) => i.id === productId);
+    const item = items.find((i) => i.id === productId || i.sku === productId);
     return item ? item.quantity : 0;
   };
 
   // Calculations
-  const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalCount = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
 
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
 
   const totalOriginal = items.reduce((sum, item) => {
-    const orig = item.originalPrice || item.price;
-    return sum + orig * item.quantity;
+    const orig = Number(item.originalPrice || item.price) || 0;
+    return sum + orig * (Number(item.quantity) || 0);
   }, 0);
 
-  const productSavings = totalOriginal - subtotal;
-  const deliveryFee = subtotal > 199 || subtotal === 0 ? 0 : 25;
+  const productSavings = Math.max(0, totalOriginal - subtotal);
+  const deliveryFee = subtotal >= 199 || subtotal === 0 ? 0 : 25;
   const platformFee = items.length > 0 ? 3 : 0;
-  const grandTotal = subtotal + deliveryFee + platformFee;
-  const totalSavings = productSavings + (deliveryFee === 0 && subtotal > 0 ? 25 : 0);
+  const couponDiscount = coupon ? Math.min(coupon.discount, subtotal) : 0;
+  const grandTotal = Math.max(0, subtotal - couponDiscount + deliveryFee + platformFee);
+  const totalSavings = productSavings + couponDiscount + (deliveryFee === 0 && subtotal > 0 ? 25 : 0);
 
   return (
     <CartContext.Provider
       value={{
         items,
         addToCart,
+        addBatchToCart,
         removeFromCart,
         updateQuantity,
         addMultipleItems,
@@ -139,6 +212,10 @@ export const CartProvider = ({ children }) => {
         productSavings,
         deliveryFee,
         platformFee,
+        coupon,
+        couponDiscount,
+        applyCoupon,
+        removeCoupon,
         grandTotal,
         totalSavings,
         lastAddedId
